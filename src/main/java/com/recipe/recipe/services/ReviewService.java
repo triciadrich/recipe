@@ -41,7 +41,7 @@ public class ReviewService {
     }
 
     public List<Review> getReviewByUsername(String username) throws NoSuchReviewException {
-        List<Review> reviews = reviewRepo.findByUsername(username);
+        List<Review> reviews = reviewRepo.findByUser_username(username);
 
         if (reviews.isEmpty()) {
             throw new NoSuchReviewException("No reviews could be found for username " + username);

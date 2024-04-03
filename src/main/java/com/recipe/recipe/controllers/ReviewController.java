@@ -2,13 +2,15 @@ package com.recipe.recipe.controllers;
 
 import com.recipe.recipe.exceptions.NoSuchRecipeException;
 import com.recipe.recipe.exceptions.NoSuchReviewException;
+import com.recipe.recipe.models.CustomUserDetails;
 import com.recipe.recipe.models.Recipe;
 import com.recipe.recipe.models.Review;
-import com.recipe.recipe.models.User;
 import com.recipe.recipe.services.RecipeService;
 import com.recipe.recipe.services.ReviewService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -23,11 +25,9 @@ public class ReviewController {
     @Autowired
     RecipeService recipeService;
 
-    @Autowired
+
     Recipe recipe;
 
-    @Autowired
-    User user;
 
     @GetMapping("/{id}")
     public ResponseEntity<?> getReviewById(@PathVariable("id") Long id) {
@@ -60,19 +60,22 @@ public class ReviewController {
     }
 
     @PostMapping("/{recipeId}")
-    public ResponseEntity<?> postNewReview(@RequestBody Review review, @PathVariable("recipeId") Long recipeId) {
-        if(review.getUsername().equals(recipe.getUser().getUsername())){
-            return ResponseEntity.badRequest().body("YOu can't leave a review for your own recipe!");
-        }
+    public ResponseEntity<?> postNewReview(@RequestBody Review review, @PathVariable("recipeId") Long recipeId, Authentication authentication) {
         try {
-            Recipe insertedRecipe = reviewService.postNewReview(review, recipeId);
-            return ResponseEntity.created(insertedRecipe.getLocationURI()).body(insertedRecipe);
-        } catch (NoSuchRecipeException e) {
+            review.setUser((CustomUserDetails) authentication.getPrincipal());
+            Recipe insertedRecipe =
+                    reviewService.postNewReview(review, recipeId);
+            return ResponseEntity.created(
+                    insertedRecipe.getLocationURI()).body(insertedRecipe);
+        } catch (NoSuchRecipeException
+
+                 | IllegalStateException e) {
             return ResponseEntity.badRequest().body(e.getMessage());
         }
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasPermission(#id, 'Review', 'delete')")
     public ResponseEntity<?> deleteReviewById(@PathVariable("id") Long id) {
         try {
             Review review = reviewService.deleteReviewById(id);
@@ -83,7 +86,9 @@ public class ReviewController {
     }
 
     @PatchMapping
-    public ResponseEntity<?> updateReviewById(@RequestBody Review reviewToUpdate) {
+    @PreAuthorize("hasPermission(#reviewToUpdate.id, 'Review', 'edit')")
+    public ResponseEntity<?> updateReviewById(
+            @RequestBody Review reviewToUpdate) {
         try {
             Review review = reviewService.updateReviewById(reviewToUpdate);
             return ResponseEntity.ok(review);

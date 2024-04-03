@@ -2,6 +2,7 @@ package com.recipe.recipe.models;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.*;
+import net.bytebuddy.dynamic.loading.InjectionClassLoader;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import javax.persistence.*;
@@ -18,11 +19,15 @@ import java.util.Collection;
 @AllArgsConstructor
 public class Recipe {
     @Id
-    @GeneratedValue
+    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "recipe_generator")
     private Long id;
-
-    @Column(nullable = false)
     private String name;
+
+    @ManyToOne(optional = false)
+    @JoinColumn
+    @JsonIgnore
+    private CustomUserDetails user;
+
 
 
     @Column(nullable = false)
@@ -32,24 +37,25 @@ public class Recipe {
     private Integer difficultyRating;
 
     @OneToMany(cascade = CascadeType.ALL)
-    @JoinColumn(name = "recipeId", nullable = false, foreignKey = @ForeignKey)
+    @JoinColumn(name = "recipe_id", nullable = false)
+    @Builder.Default
     private Collection<Ingredient> ingredients = new ArrayList<>();
 
     @OneToMany(cascade = CascadeType.ALL)
-    @JoinColumn(name = "recipeId", nullable = false, foreignKey = @ForeignKey)
+    @JoinColumn(name ="recipe_id", nullable = false)
+    @Builder.Default
     private Collection<Step> steps = new ArrayList<>();
 
     @OneToMany(cascade = CascadeType.ALL)
-    @JoinColumn(name = "recipeId", nullable = false, foreignKey = @ForeignKey)
+    @JoinColumn(name= "recipe_id", nullable = false)
     private Collection<Review> reviews;
 
-    @ManyToOne(cascade = CascadeType.ALL, optional = false)
-    private User user;
-    private double avg;
+
 
     @Transient
     @JsonIgnore
     private URI locationURI;
+    private double avg;
 
     public void setDifficultyRating(int difficultyRating) {
         if (difficultyRating < 0 || difficultyRating > 10) {
@@ -93,6 +99,9 @@ public class Recipe {
         } catch (URISyntaxException e) {
             //Exception should stop here.
         }
+    }
+    public String getAuthor() {
+        return user.getUsername();
     }
 
 }
